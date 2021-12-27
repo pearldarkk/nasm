@@ -1,6 +1,6 @@
 %include        'func64.asm'
-section .data
-    string  db  'hello', 0xa
+section .bss
+    string  resb  256
 
 section .text
     global _start
@@ -11,7 +11,7 @@ _start:
     mov     rsi, string
     mov     rdx, 256
     mov     rax, 0
-    ;syscall
+    syscall
     
     mov     rdi, string
     call    reverse
