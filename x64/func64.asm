@@ -2,36 +2,113 @@ atoi:   ; ascii to int, return in eax
     push    rbp
     mov     rbp, rsp
     sub     rsp, 8
+    push    rbx
     mov     [rbp - 8], rdi     
     mov     rsi, rdi
     xor     eax, eax
+    xor     ecx, ecx
     mov     ebx, 10
     
     .iter:
     mul     ebx
-    mov     dl, [rsi]
+    mov     cl, [rsi]
     inc     si
-    cmp     dl, 0xa
-    jz      .done
-    and     dl, 0xf
-    add     eax, edx
+    cmp     cl, '0'
+    js      .done
+    cmp     cl, '9'
+    jg      .done
+    and     cl, 0xf
+    add     eax, ecx
     jmp     .iter
 
     .done:
-    xor     edx, edx    
     div     ebx
+    pop     rbx
     mov     rsp, rbp
     pop     rbp    
     ret    
+    
+atol:   ; ascii to ull, return in rax
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 8
+    push    rbx
+    mov     [rbp - 8], rdi     
+    mov     rsi, rdi
+    xor     rax, rax
+    xor     rcx, rcx
+    mov     rbx, 10
+    
+    .iter:
+    mul     rbx
+    mov     cl, [rsi]
+    inc     rsi
+    cmp     cl, '0'
+    js      .done
+    cmp     cl, '9'
+    jg      .done
+    and     cl, 0xf
+    add     rax, rcx
+    jmp     .iter
+
+    .done:
+    div     rbx
+    pop     rbx
+    mov     rsp, rbp
+    pop     rbp    
+    ret    
+    
+ltoa:   ; long long (64bit integer) to ascii, return strlen in rcx, pointer in rax
+    push    rbp    
+    mov     rbp, rsp
+    push    rbx
+    push    rcx
+    mov     rbx, rdi      ; save int to ebx
+    
+    ; dynamic memory allocation to make room to create string
+    xor     rdi, rdi     
+    mov     rax, 12
+    syscall                     ; sys_brk(0) fails, return current program break
+    mov     rdi, rax
+    add     rdi, 20             
+    mov     rax, 12
+    syscall                     ; sys_brk(current_break + 10)
+    dec     rax
+    mov     rsi, rax            ; rsi = *(str + 20)
+    mov     rax, rbx
+    mov     rdi, rsi
+    mov     rbx, 10
+    
+    .iter:
+    xor     rdx, rdx
+    div     rbx
+    or      dl, 0x30
+    mov     [rdi], dl
+    dec     rdi
+    test    rax, rax
+    jz      .done
+    jmp     .iter
+
+    .done:
+    sub     rsi, rdi
+    mov     rax, rsi
+    mov     rsi, rdi
+    inc     rsi
+    pop     rcx
+    pop     rbx
+    mov     rsp, rbp
+    pop     rbp
+    ret   
 
 itoa:   ; int to ascii, return size in rax, pointer in rsi
     push    rbp    
     mov     rbp, rsp
+    push    rbx
     push    rcx
     mov     ebx, edi      ; save int to ebx
     
     ; dynamic memory allocation to make room to create string
-    test    rdi, rdi     
+    xor     rdi, rdi     
     mov     rax, 12
     syscall                     ; sys_brk(0) fails, return current program break
     mov     rdi, rax
@@ -60,6 +137,7 @@ itoa:   ; int to ascii, return size in rax, pointer in rsi
     mov     rsi, rdi
     inc     rsi
     pop     rcx
+    pop     rbx
     mov     rsp, rbp
     pop     rbp
     ret   
@@ -83,7 +161,7 @@ print:      ; print with 1 space
  printArray:  ; print n elements of array arr
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 0x18          ; align stack to call other functions
+    sub     rsp, 0x10          ; align stack to call other functions
     mov     ecx, esi
     mov     [rbp - 8], rdi
         
@@ -95,11 +173,11 @@ print:      ; print with 1 space
     mov     rdi, [rbp - 8]
     inc     di
     mov     [rbp - 8], rdi 
-    mov     [rbp - 0x14], ecx
+    mov     [rbp - 0xc], ecx
     mov     rdi, 1
     movzx   rdx, ax
     call    print
-    mov     ecx, [rbp - 0x14]
+    mov     ecx, [rbp - 0xc]
     dec     ecx
     test    ecx, ecx
     jnz     .iter
@@ -144,7 +222,8 @@ reverse:    ; reverse(str) use stack to store each byte and pop to reverse the s
 bigSum:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 0x18        
+    sub     rsp, 0x20     
+    push    rbx   
     mov     [rbp - 8], rdi
     mov     [rbp - 0x10], rsi
     mov     [rbp - 0x18], rdx    
@@ -155,51 +234,52 @@ bigSum:
     mov     rsi, [rbp - 0x10]
     mov     rdx, [rbp - 0x18]
     xor     rax, rax
+    xor     r8, r8
     mov     bh, 0x30
     mov     bl, 0xa
     
     .calc:
-    mov     ah, [rsi]
-    inc     rsi
-    cmp     ah, bl
-    jz      .swap               ; if one string's shorter, swap 
-    sub     ah, bh
-    add     al, ah              ; + carry of the previous 
-    mov     ah, [rdi]
-    inc     rdi
-    cmp     ah, bl
-    jz      .load               ; if this is the longer string, load the rest (with carry) to complete
-    sub     ah, bh
-    add     al, ah
-    xor     ah, ah              ; prepare div
+    mov     cl, [rsi + r8]
+    cmp     cl, bl
+    jz      .swap                    ; if one string's shorter, swap 
+    sub     cl, bh
+    mov     ah, cl                  ; + carry of the previous 
+    mov     cl, [rdi + r8]
+    cmp     cl, bl
+    jz      .load                    ; if this is the longer string, load the rest (with carry) to complete
+    sub     cl, bh
+    add     al, cl                  ; digit2 + carry
+    add     al, ah                  ; digit1 + digit2
+    xor     ah, ah                  ; prepare div
     div     bl                
-    add     ah, bh              ; char(remainder)
-    mov     [rdx], ah
-    inc     rdx
+    add     ah, bh                  ; char(remainder)
+    mov     cl, ah
+    mov     [rdx + r8], cl
+    inc     r8
     jmp     .calc
     
     .swap:
     xchg    rsi, rdi
     
     .load:
-    mov     ah, [rsi]
-    inc     rsi
-    add     al, ah              ; + carry of the previous sum calc
-    cmp     al, bl              ; meets end and have no carry
+    mov     cl, [rsi + r8]
+    add     al, cl                  ; + carry of the previous sum calc
+    cmp     al, bl                  ; meets end and have no carry
     jz      .finish
     cmp     al, bh
-    jl      .carry              ; if still have carry
+    jl      .carry                   ; if still have carry
     sub     al, bh
     xor     ah, ah
     div     bl
     add     ah, bh              
-    mov     [rdx], ah
-    inc     rdx
+    mov     cl, ah
+    mov     [rdx + r8], cl
+    inc     r8
     jmp     .load
     
     .carry:
-    add     al, 0x26            ; 0xa + carry + 0x20 = char(carry)
-    mov     byte [edx + ecx], al
+    add     al, 23h                ; 0xd + carry + 0x23 = char(carry)
+    mov     [rdx + r8], al
     
     .finish:
     mov     rdi, [rbp - 8]
@@ -209,6 +289,7 @@ bigSum:
     mov     rdi, [rbp - 0x18]
     call    reverse             ; reverse(sum)   
     mov     rax, [rbp - 0x18]   
+    pop     rbx
     mov     rsp, rbp
     pop     rbp
     ret 
