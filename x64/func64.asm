@@ -219,6 +219,61 @@ reverse:    ; reverse(str) use stack to store each byte and pop to reverse the s
     pop     rbp
     ret  
 
+ltoh:  ; ltoh([in] val, [out] hexString) convert int64 to hex string return szArr in rax
+    push    rbp    
+    mov     rbp, rsp
+    mov     rax, rdi
+    mov     rdi, rsi            
+    mov     r10, rdi            ; save rdi
+    mov     r8, 16
+    push    "#"                 ; pivot
+    .getDigit:
+    xor     rdx, rdx
+    div     r8
+    cmp     edx, 0Ah
+    jl      .xor30
+    add     edx, 37h            ; if a - f -> "a"-"f"
+    jmp     .saveDigit
+    
+    .xor30:
+    xor     edx, 30h            ; if 0 - 9 -> "0" - "9"
+    .saveDigit:
+    push    dx
+    test    rax, rax
+    jz      .toString
+    jmp     .getDigit
+
+    .toString:                   ; get char from stack to hexString
+    pop     ax
+    cmp     ax, "#"
+    jz      .done
+    stosb
+    jmp     .toString
+
+    .done:
+    sub     rdi, r10
+    mov     rax, rdi
+    mov     rsp, rbp
+    pop     rbp
+    ret   
+
+strlencalc:     ; calculate strlen(&rcx), return in rax
+    push    rbp
+    mov     rbp, rsp
+    mov     rax, 0
+    
+    .iter:
+    cmp     byte [rdi], 0
+    jz      .finished
+    inc     rcx
+    inc     rax
+    jmp     .iter
+    
+    .finished:
+    mov     rsp, rbp
+    pop     rbp
+    ret
+
 bigSum:
     push    rbp
     mov     rbp, rsp
