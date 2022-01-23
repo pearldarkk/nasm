@@ -263,9 +263,11 @@ strlencalc:     ; calculate strlen(&rcx), return in rax
     mov     rax, 0
     
     .iter:
+    cmp     byte [rdi], 0xa
+    jz      .finished
     cmp     byte [rdi], 0
     jz      .finished
-    inc     rcx
+    inc     rdi
     inc     rax
     jmp     .iter
     

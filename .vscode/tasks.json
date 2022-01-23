@@ -10,6 +10,7 @@
                     "regexp": "error"
                 }
             },
+            "group": "build",
             "presentation": {
                 "focus": true,
                 "panel": "dedicated",
@@ -32,7 +33,10 @@
                 "reveal": "silent",
                 "clear": true
             },
-            "group": "build"
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "gas",
