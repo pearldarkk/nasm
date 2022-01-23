@@ -921,9 +921,13 @@ _start:
     jmp     .nextEntry
 
     .endProgramHeader:
-
     ; done parsing
     .finished:
+    ; free memory
+    mov     rdi, [filedata]
+    mov     rax, 12
+    syscall
+    ; close file
     mov     rdi, [fd]
     mov     rax, 3
     syscall                 ; close(fd)
