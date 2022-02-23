@@ -158,7 +158,7 @@ print:      ; print with 1 space
     syscall
     ret
 
- printArray:  ; print n elements of array arr
+printArray:  ; print n elements of array arr
     push    rbp
     mov     rbp, rsp
     sub     rsp, 0x10          ; align stack to call other functions
@@ -257,7 +257,36 @@ ltoh:  ; ltoh([in] val, [out] hexString) convert int64 to hex string return szAr
     pop     rbp
     ret   
 
-strlencalc:     ; calculate strlen(&rcx), return in rax
+strncmp:           ; work similar to strncmp() in C
+    push    rbp
+    mov     rbp, rsp
+
+    cld
+    mov     rcx, rdx
+    .iter:
+    lodsb
+    mov     dl, byte [rdi]
+    cmp     al, dl
+    jnz     .exit
+    inc     rdi
+    dec     cx
+    jnz     .iter
+
+    .equal:
+    mov     rax, 0
+    pop     rdi
+    pop     rsi
+    mov     rsp, rbp
+    pop     rbp
+    ret
+
+    .exit:
+    mov     rax, rcx
+    mov     rsp, rbp
+    pop     rbp
+    ret
+
+strlencalc:     ; calculate strlen(&rdi), return in rax
     push    rbp
     mov     rbp, rsp
     mov     rax, 0
